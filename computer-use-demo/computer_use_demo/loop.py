@@ -115,7 +115,7 @@ async def sampling_loop(
             _inject_prompt_caching(messages)
             # Because cached reads are 10% of the price, we don't think it's
             # ever sensible to break the cache by truncating images
-            only_n_most_recent_images = 0
+            # only_n_most_recent_images = 0
             system["cache_control"] = {"type": "ephemeral"}
 
         if only_n_most_recent_images:
@@ -152,6 +152,12 @@ async def sampling_loop(
         response = raw_response.parse()
 
         response_params = _response_to_params(response)
+        if tokens_remaining := raw_response.headers.get(
+            "anthropic-ratelimit-input-tokens-remaining"
+        ):
+            response_params.append(
+                {"type": "text", "text": f"Tokens remaining: {tokens_remaining}"}
+            )
         messages.append(
             {
                 "role": "assistant",

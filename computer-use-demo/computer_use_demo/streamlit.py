@@ -85,7 +85,7 @@ def setup_state():
     if "tools" not in st.session_state:
         st.session_state.tools = {}
     if "only_n_most_recent_images" not in st.session_state:
-        st.session_state.only_n_most_recent_images = 3
+        st.session_state.only_n_most_recent_images = 5
     if "custom_system_prompt" not in st.session_state:
         st.session_state.custom_system_prompt = load_from_storage("system_prompt") or ""
     if "hide_images" not in st.session_state:
@@ -376,6 +376,10 @@ def _render_error(error: Exception):
         body = "You have been rate limited."
         if retry_after := error.response.headers.get("retry-after"):
             body += f" **Retry after {str(timedelta(seconds=int(retry_after)))} (HH:MM:SS).** See our API [documentation](https://docs.anthropic.com/en/api/rate-limits) for more details."
+        if tokens_remaining := error.response.headers.get(
+            "anthropic-ratelimit-input-tokens-remaining"
+        ):
+            body += f" \n**Tokens remaining: {str(int(tokens_remaining))}**"
         body += f"\n\n{error.message}"
     else:
         body = str(error)
