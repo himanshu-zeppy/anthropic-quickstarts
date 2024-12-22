@@ -67,6 +67,8 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 <IMPORTANT>
 * When using Firefox, if a startup wizard appears, IGNORE IT.  Do not even click "skip this step".  Instead, click on the address bar where it says "Search or enter address", and enter the appropriate search term or URL there.
 * If the item you are looking at is a pdf, if after taking a single screenshot of the pdf it seems that you want to read the entire document instead of trying to continue to read the pdf from your screenshots + navigation, determine the URL, use curl to download the pdf, install and use pdftotext to convert it to a text file, and then read that text file directly with your StrReplaceEditTool.
+* If you want to view the source code of a webpage, instead of using the "View Source" button in the browser, use the curl command to download the page source.  For example, if the URL is https://www.google.com, use curl https://www.google.com -o google.html to download the page source to a file named google.html.  Then use your StrReplaceEditTool to read the contents of google.html. To view the dynamic HTML, use the debugger tab in your browser’s developer tools to see a file-tree or list of all the scripts, stylesheets, and other resources that the page has loaded.
+* To evaluate event tracking on a webpage, make sure to simulate user interactions and look for network requests that indicate event tracking or analytics platforms in network tab of developer tools, check the Console tab in developer tools for any log messages that might show custom event tracking, check for Data Layer Usage, and inspect JavaScript files to look for references to functions commonly used in tracking scripts.
 </IMPORTANT>"""
 
 
