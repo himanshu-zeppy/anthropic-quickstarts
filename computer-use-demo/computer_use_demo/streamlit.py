@@ -41,6 +41,9 @@ STREAMLIT_STYLE = """
         border: 1px solid rgb(255, 75, 75);
         color: rgb(255, 255, 255);
     }
+    .stAppToolbar {
+        visibility: hidden;
+    }
     button[kind=header]:hover {
         background-color: rgb(255, 51, 51);
     }
@@ -64,7 +67,14 @@ class Sender(StrEnum):
 
 def setup_state():
     if "messages" not in st.session_state:
-        st.session_state.messages = []
+        st.session_state.messages = [
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "text", "text": "Which website do you want to analyze?"}
+                ],
+            }
+        ]
     if "api_key" not in st.session_state:
         # Try to load API key from file first, then environment
         st.session_state.api_key = load_from_storage("api_key") or os.getenv(
@@ -106,10 +116,11 @@ async def main():
 
     st.markdown(STREAMLIT_STYLE, unsafe_allow_html=True)
 
-    st.title("Claude Computer Use Demo")
+    st.logo("z-logo.png")
+    st.title("Zeppy Demo")
 
-    if not os.getenv("HIDE_WARNING", False):
-        st.warning(WARNING_TEXT)
+    # if not os.getenv("HIDE_WARNING", False):
+    #     st.warning(WARNING_TEXT)
 
     with st.sidebar:
 
@@ -172,10 +183,8 @@ async def main():
         else:
             st.session_state.auth_validated = True
 
-    chat, http_logs = st.tabs(["Chat", "HTTP Exchange Logs"])
-    new_message = st.chat_input(
-        "Type a message to send to Claude to control the computer..."
-    )
+    chat, http_logs = st.tabs([" ", " "])
+    new_message = st.chat_input("Type a message for Zeppy...")
 
     with chat:
         # render past chats
@@ -376,10 +385,6 @@ def _render_error(error: Exception):
         body = "You have been rate limited."
         if retry_after := error.response.headers.get("retry-after"):
             body += f" **Retry after {str(timedelta(seconds=int(retry_after)))} (HH:MM:SS).** See our API [documentation](https://docs.anthropic.com/en/api/rate-limits) for more details."
-        if tokens_remaining := error.response.headers.get(
-            "anthropic-ratelimit-input-tokens-remaining"
-        ):
-            body += f" \n**Tokens remaining: {str(int(tokens_remaining))}**"
         body += f"\n\n{error.message}"
     else:
         body = str(error)
