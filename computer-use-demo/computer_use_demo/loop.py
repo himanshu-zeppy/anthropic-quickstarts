@@ -29,7 +29,14 @@ from anthropic.types.beta import (
     BetaToolUseBlockParam,
 )
 
-from .tools import BashTool, ComputerTool, EditTool, ToolCollection, ToolResult
+from .tools import (
+    AnalyzerTool,
+    BashTool,
+    ComputerTool,
+    EditTool,
+    ToolCollection,
+    ToolResult,
+)
 
 COMPUTER_USE_BETA_FLAG = "computer-use-2024-10-22"
 PROMPT_CACHING_BETA_FLAG = "prompt-caching-2024-07-31"
@@ -68,6 +75,7 @@ SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
 <IMPORTANT>
 * When using Firefox, if a startup wizard appears, IGNORE IT.  Do not even click "skip this step".  Instead, click on the address bar where it says "Search or enter address", and enter the appropriate search term or URL there.
 * If the item you are looking at is a pdf, if after taking a single screenshot of the pdf it seems that you want to read the entire document instead of trying to continue to read the pdf from your screenshots + navigation, determine the URL, use curl to download the pdf, install and use pdftotext to convert it to a text file, and then read that text file directly with your StrReplaceEditTool.
+* If you want to analyze the source code of a webpage, instead of using the "View Source" button in the browser, use the Analyzer tool.
 * When viewing a website using Firefox, accept all cookies in the cookie prompt if a prompt for cookies is shown before proceeding.
 * When viewing a website using Firefox, dismiss newletter prompt if such a prompt is shown before proceeding.
 * To evaluate event tracking on a webpage, take your time to do each of the following steps:
@@ -160,6 +168,7 @@ async def sampling_loop(
         ComputerTool(),
         BashTool(),
         EditTool(),
+        AnalyzerTool(),
     )
     system = BetaTextBlockParam(
         type="text",
@@ -220,12 +229,12 @@ async def sampling_loop(
         response = raw_response.parse()
 
         response_params = _response_to_params(response)
-        if tokens_remaining := raw_response.headers.get(
-            "anthropic-ratelimit-input-tokens-remaining"
-        ):
-            response_params.append(
-                {"type": "text", "text": f"Tokens remaining: {tokens_remaining}"}
-            )
+        # if tokens_remaining := raw_response.headers.get(
+        #     "anthropic-ratelimit-input-tokens-remaining"
+        # ):
+        #     response_params.append(
+        #         {"type": "text", "text": f"Tokens remaining: {tokens_remaining}"}
+        #     )
         messages.append(
             {
                 "role": "assistant",

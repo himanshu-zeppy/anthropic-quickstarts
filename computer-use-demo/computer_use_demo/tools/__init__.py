@@ -1,3 +1,4 @@
+from .analyzer import AnalyzerTool
 from .base import CLIResult, ToolResult
 from .bash import BashTool
 from .collection import ToolCollection
@@ -9,6 +10,7 @@ __ALL__ = [
     CLIResult,
     ComputerTool,
     EditTool,
+    AnalyzerTool,
     ToolCollection,
     ToolResult,
 ]

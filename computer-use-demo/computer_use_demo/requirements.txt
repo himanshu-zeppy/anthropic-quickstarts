@@ -3,3 +3,7 @@ anthropic[bedrock,vertex]>=0.37.1
 jsonschema==4.22.0
 boto3>=1.28.57
 google-auth<3,>=2
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+openai>=1.12.0
+aiohttp>=3.8.0
