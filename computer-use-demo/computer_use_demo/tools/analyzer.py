@@ -22,6 +22,7 @@ class AnalyzerTool(BaseAnthropicTool):
             "custom_events": [],
             "pixel_tracking": [],
             "event_listeners": [],
+            "hotjar_tracking": [],
         }
 
     def to_params(self) -> BetaToolUnionParam:
@@ -102,6 +103,18 @@ class AnalyzerTool(BaseAnthropicTool):
             )
             self.tracking_types["pixel_tracking"] = [str(pixel) for pixel in pixels]
 
+            # Find hotjar tracking
+            hj_scripts = soup.find_all(
+                "script",
+                string=re.compile(
+                    r"hotjar|hj\(",
+                    re.IGNORECASE,
+                ),
+            )
+            self.tracking_types["hotjar_tracking"] = [
+                script.string for script in hj_scripts if script.string
+            ]
+
             return self.tracking_types
         except Exception as e:
             raise ToolError(f"Error extracting tracking code: {str(e)}") from e
@@ -125,6 +138,9 @@ class AnalyzerTool(BaseAnthropicTool):
         Event Listeners:
         {tracking_data['event_listeners']}
 
+        Hotjar Tracking:
+        {tracking_data['hotjar_tracking']}
+
         Please provide:
         1. Overview of tracking implementation
         2. List of identified tracking methods
@@ -134,7 +150,7 @@ class AnalyzerTool(BaseAnthropicTool):
 
         try:
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o-mini",
                 messages=[
                     {
                         "role": "system",
@@ -143,7 +159,7 @@ class AnalyzerTool(BaseAnthropicTool):
                     {"role": "user", "content": prompt},
                 ],
                 max_tokens=1000,
-                temperature=0.7,
+                temperature=0,
             )
             content = response.choices[0].message.content
             if content is None:
@@ -177,6 +193,7 @@ class AnalyzerTool(BaseAnthropicTool):
             - Custom Events: {len(tracking_data['custom_events'])} events
             - Pixel Tracking: {len(tracking_data['pixel_tracking'])} pixels
             - Event Listeners: {len(tracking_data['event_listeners'])} listeners
+            - Hotjar Tracking: {len(tracking_data['hotjar_tracking'])} implementations
             """
 
             return ToolResult(
