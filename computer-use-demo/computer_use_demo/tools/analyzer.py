@@ -70,7 +70,12 @@ class AnalyzerTool(BaseAnthropicTool):
                 r"gtag\(",
                 r"G-[A-Z0-9]+",  # GA4 measurement ID pattern
             ],
-            "tag_manager": [r"googletagmanager\.com/gtm\.js", r"GTM-[A-Z0-9]+"],
+            "tag_manager": [
+                r"googletagmanager\.com/gtm\.js",
+                r"GTM-[A-Z0-9]+",
+                r"dataLayer\.push\(",
+                r"dataLayer\s*=\s*\[",
+            ],
         }
 
         results = {
@@ -123,6 +128,8 @@ class AnalyzerTool(BaseAnthropicTool):
                 r"trackEvent",
                 r"trackPageview",
                 r"trackCustom",
+                r"trackClick",
+                r"recordEvent",
             ],
             "data_attributes": [r"data-analytics", r"data-track", r"data-event"],
         }
