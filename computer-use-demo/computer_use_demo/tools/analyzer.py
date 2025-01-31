@@ -61,14 +61,12 @@ class AnalyzerTool(BaseAnthropicTool):
         ga_patterns = {
             "universal_analytics": [
                 r"google-analytics\.com/analytics\.js",
-                r"ga\(",
                 r"_gaq\.push",
                 r"UA-\d+-\d+",
             ],
             "gtag": [
                 r"googletagmanager\.com/gtag/js",
                 r"gtag\(",
-                r"G-[A-Z0-9]+",  # GA4 measurement ID pattern
             ],
             "tag_manager": [
                 r"googletagmanager\.com/gtm\.js",
@@ -250,7 +248,7 @@ class AnalyzerTool(BaseAnthropicTool):
         """Detect Hotjar implementation patterns."""
         hotjar_patterns = [
             # Hotjar snippet initialization
-            r"hotjar|hj\(|hjid|hjsv",
+            r"hotjar|hjid|hjsv",
             # Hotjar script source
             r"static\.hotjar\.com",
             # Hotjar configuration
@@ -396,60 +394,85 @@ class AnalyzerTool(BaseAnthropicTool):
         """Generate analysis using OpenAI."""
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
 
-        prompt = f"""
-        Analyze this webpage tracking implementation and provide a detailed summary:
+        # Split analysis into focused areas
+        prompts = {
+            "google_analytics": f"""
+            Analyze Google Analytics implementation:
+            UA: {tracking_data['google_analytics']['implementations']['universal_analytics']}
+            GA4/GTM: {tracking_data['google_analytics']['implementations']['gtag']}
+            Tag Manager: {tracking_data['google_analytics']['implementations']['tag_manager']}
+            IDs: {tracking_data['google_analytics']['ids']}
 
-        Google Analytics Implementation:
-        - Universal Analytics: {tracking_data['google_analytics']['implementations']['universal_analytics']}
-        - GA4/GTM: {tracking_data['google_analytics']['implementations']['gtag']}
-        - Tag Manager: {tracking_data['google_analytics']['implementations']['tag_manager']}
-        - IDs Found: {tracking_data['google_analytics']['ids']}
+            Provide brief:
+            1. Implementation assessment
+            2. Potential gaps and recommended improvements
+            """,
+            "custom_events": f"""
+            Analyze event tracking:
+            Listeners: {tracking_data['custom_events']['event_listeners']}
+            Handlers: {tracking_data['custom_events']['inline_handlers']}
+            Tracking calls: {tracking_data['custom_events']['tracking_calls']}
+            Data attributes: {tracking_data['custom_events']['data_attributes']}
 
-        Custom Event Tracking:
-        - Event Listeners: {tracking_data['custom_events']['event_listeners']}
-        - Inline Handlers: {tracking_data['custom_events']['inline_handlers']}
-        - Tracking Calls: {tracking_data['custom_events']['tracking_calls']}
-        - Data Attributes: {tracking_data['custom_events']['data_attributes']}
+            Provide brief:
+            1. Implementation assessment
+            2. Potential gaps and recommended improvements
+            """,
+            "pixels_and_hotjar": f"""
+            Analyze tracking tools:
+            Pixels: {tracking_data['pixel_tracking']['pixels']}
 
-        Pixel Tracking:
-        {tracking_data['pixel_tracking']['pixels']}
-        Pixel IDs: {tracking_data['pixel_tracking']['metadata']['pixel_ids']}
+            Hotjar configured: {tracking_data['hotjar_tracking']['verification']}
+            Version: {tracking_data['hotjar_tracking']['version_info']}
 
-        Hotjar Implementation:
-        - Scripts: {tracking_data['hotjar_tracking']['scripts']}
-        - Verification: {tracking_data['hotjar_tracking']['verification']}
-        - Version Info: {tracking_data['hotjar_tracking']['version_info']}
+            Provide brief:
+            1. Implementation assessment
+            2. Potential gaps and recommended improvements
+            """,
+        }
 
-        Implementation Quality Metrics:
-        {tracking_data['metadata']['implementation_quality']}
+        analysis_results = {}
 
-        Please provide:
-        1. Overview of tracking implementation
-        2. List of identified tracking methods
-        3. Potential gaps and recommended improvements
-        4. Best practices assessment
-        5. Implementation quality concerns
+        # Process each section separately
+        for section, prompt in prompts.items():
+            try:
+                response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert in web analytics and tracking implementations. Provide concise, actionable insights.",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    max_tokens=1000,
+                    temperature=0,
+                )
+                content = response.choices[0].message.content
+                if content is None:
+                    raise ToolError(f"OpenAI API returned empty response for {section}")
+                analysis_results[section] = content
+            except Exception as e:
+                raise ToolError(
+                    f"OpenAI API error: {str(e)} \n Prompt: {prompt}"
+                ) from e
+
+        # Combine the results
+        combined_analysis = f"""
+        Google Analytics Analysis:
+        ------------------------
+        {analysis_results['google_analytics']}
+
+        Custom Event Tracking Analysis:
+        ----------------------------
+        {analysis_results['custom_events']}
+
+        Pixel and Hotjar Analysis:
+        ------------------------
+        {analysis_results['pixels_and_hotjar']}
         """
 
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert in web analytics and tracking implementations.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                max_tokens=1000,
-                temperature=0,
-            )
-            content = response.choices[0].message.content
-            if content is None:
-                raise ToolError("OpenAI API returned empty response")
-            return content
-        except Exception as e:
-            raise ToolError(f"OpenAI API error: {str(e)}") from e
+        return combined_analysis
 
     async def __call__(self, **kwargs) -> ToolResult:
         """Execute the webpage analysis tool."""
